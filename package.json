@@ -1,0 +1,39 @@
+{
+  "name": "real_profit_frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "shopify": "shopify"
+  },
+  "dependencies": {
+    "@shopify/app-bridge-react": "^4.1.2",
+    "@shopify/polaris": "^13.9.5",
+    "@shopify/polaris-icons": "^9.2.0",
+    "@tanstack/react-query": "^5.62.0",
+    "axios": "^1.7.9",
+    "date-fns": "^4.1.0",
+    "next": "15.1.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "^3.7.0"
+  },
+  "devDependencies": {
+    "@shopify/cli": "^3.59.0",
+    "@types/node": "^20.17.10",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "15.1.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

@@ -1,0 +1,39 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "c8377a0aa89193c2b8561f205691aa36"
+name = "Real Profit"
+application_url = "https://realprofit.alkansystems.com"
+embedded = true
+handle = "real-profit"
+
+[webhooks]
+api_version = "2025-10"
+
+  [[webhooks.subscriptions]]
+  uri = "https://real.alkansystems.com/api/gdpr/process"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+  [[webhooks.subscriptions]]
+  topics = [
+  "app_subscriptions/update",
+  "app/uninstalled",
+  "orders/create",
+  "orders/updated",
+  "refunds/create"
+]
+  uri = "https://real.alkansystems.com/webhooks"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_inventory,read_orders,read_products,read_shopify_payments_payouts"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://real.alkansystems.com/auth/install",
+  "https://real.alkansystems.com/auth/callback"
+]
+
+[pos]
+embedded = true
