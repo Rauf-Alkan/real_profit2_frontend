@@ -66,14 +66,21 @@ export default function GlobalPortfolio() {
     queryFn: () => api.analytics.getMe(),
   });
 
-  useEffect(() => {
-    if (isStoreError && shop) {
-      const backendUrl ='https://real.api.alkansystems.com';
-      const authUrl = `https://${backendUrl}/install/shopify?shop=${shop}`;
-      if (window.top) {
-        window.top.location.href = authUrl;
-      }
+ useEffect(() => {
+  // 1. Sadece hata varsa ve shop parametresi varsa çalışır
+  if (isStoreError && shop) {
+    // ⚠️ ÖNEMLİ: Linkin başına tekrar https koyma, değişkenin içinde zaten var.
+    // ⚠️ ÖNEMLİ: Backend'de @GetMapping("/install") olduğu için sonuna /shopify ekleme.
+    const backendUrl = 'https://real.api.alkansystems.com'; 
+    const authUrl = `${backendUrl}/install?shop=${shop}`;
+    
+    console.log("🚀 Redirecting to:", authUrl);
+    
+    if (window.top) {
+      // iframe'i kırıp tüm sayfayı yönlendirir
+      window.top.location.href = authUrl;
     }
+  }
   }, [isStoreError, shop]);
 
   // 2. DATA FETCHING: Financial Analytics
