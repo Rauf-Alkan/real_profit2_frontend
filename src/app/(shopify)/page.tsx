@@ -66,6 +66,16 @@ export default function GlobalPortfolio() {
     queryFn: () => api.analytics.getMe(),
   });
 
+  useEffect(() => {
+    if (isStoreError && shop) {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://real.api.alkansystems.com';
+      const authUrl = `https://${backendUrl}/api/auth/shopify?shop=${shop}`;
+      if (window.top) {
+        window.top.location.href = authUrl;
+      }
+    }
+  }, [isStoreError, shop]);
+
   // 2. DATA FETCHING: Financial Analytics
   const {
     data: globalResponse,
@@ -121,19 +131,6 @@ export default function GlobalPortfolio() {
       </Page>
     );
   }
-
-  useEffect(() => {
-    // Eğer backend hata döndürdüyse (401 Unauthorized veya dükkan yoksa)
-    if (isStoreError && shop) {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://real.api.alkansystems.com';
-      const authUrl = `https://${backendUrl}/api/auth/shopify?shop=${shop}`;
-      
-      // Iframe içinden çıkıp Shopify ana sayfasını (top frame) yönlendiriyoruz
-      if (window.top) {
-        window.top.location.href = authUrl;
-      }
-    }
-  }, [isStoreError, shop]);
 
   // Empty State
   if (!isGlobalLoading && portfolio.length === 0) {
