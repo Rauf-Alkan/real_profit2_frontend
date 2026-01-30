@@ -68,8 +68,8 @@ export default function GlobalPortfolio() {
 
   useEffect(() => {
     if (isStoreError && shop) {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://real.api.alkansystems.com';
-      const authUrl = `https://${backendUrl}/api/auth/shopify?shop=${shop}`;
+      const backendUrl ='https://real.api.alkansystems.com';
+      const authUrl = `https://${backendUrl}/install/shopify?shop=${shop}`;
       if (window.top) {
         window.top.location.href = authUrl;
       }
