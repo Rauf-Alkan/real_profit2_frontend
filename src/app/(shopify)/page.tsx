@@ -67,16 +67,12 @@ export default function GlobalPortfolio() {
   });
 
  useEffect(() => {
-  // Eğer dükkan bulunamadıysa (isStoreError) ve shop parametresi varsa
   if (isStoreError && shop) {
-    // ⚠️ DİKKAT: Başına tekrar https:// koymuyoruz, url zaten tam.
-    // ⚠️ DİKKAT: Backend'de sadece /install var, sonundaki /shopify'ı sildik.
+    // ⚠️ DİKKAT: Başına https:// ekleme, alttaki string içinde zaten var.
+    // ⚠️ DİKKAT: /install/shopify değil, sadece /install (Backend ile aynı olmalı).
     const authUrl = `https://real.api.alkansystems.com/install?shop=${shop}`;
     
-    console.log("🚀 Iframe kırılıyor, yönlendirme adresi:", authUrl);
-    
     if (window.top) {
-      // window.top ile iframe'den kurtuluyoruz
       window.top.location.href = authUrl;
     }
   }

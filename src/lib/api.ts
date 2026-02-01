@@ -80,17 +80,25 @@ axiosInstance.interceptors.request.use(async (config: InternalAxiosRequestConfig
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (axios.isAxiosError(error) && error.response) {
+    // Null kontrolü: error.response var mı?
+    if (error.response && typeof window !== 'undefined') {
       const status = error.response.status;
+      const shop = getShopFromUrl();
 
-      // 401: Token geçersizse dükkan sahibini tekrar install akışına gönder (Breakout)
-      if (status === 401 && typeof window !== 'undefined') {
-        const shop = getShopFromUrl();
-        if (shop) {
-          const backendRoot = baseURL.replace(/\/api\/?$/, '');
-          window.open(`${backendRoot}/install?shop=${shop}`, '_top');
-          return new Promise(() => { });
+      // 401 Unauthorized: Yetki bittiyse iframe'i kırıp yeniden kurdur
+      if (status === 401 && shop) {
+        // Backend root adresini /api kısmını atarak buluyoruz
+        const backendRoot = baseURL.replace(/\/api\/?$/, '');
+        
+        // 🚀window.open yerine window.top.location.href kullanımı production'da daha güvenlidir
+        if (window.top) {
+          window.top.location.href = `${backendRoot}/install?shop=${shop}`;
+        } else {
+          window.location.href = `${backendRoot}/install?shop=${shop}`;
         }
+        
+        // İsteği burada asılı bırakıyoruz
+        return new Promise(() => { });
       }
     }
     return Promise.reject(error);
