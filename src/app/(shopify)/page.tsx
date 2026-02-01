@@ -3,38 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Page,
-  Grid,
-  Text,
-  BlockStack,
-  InlineStack,
-  Box,
-  IndexTable,
-  Badge,
-  Icon,
-  Button,
-  SkeletonBodyText,
-  EmptyState,
-  Banner,
-  Divider,
-  SkeletonPage,
-  LegacyCard
+  Page, Grid, Text, BlockStack, InlineStack, Box, IndexTable,
+  Badge, Icon, Button, SkeletonBodyText, EmptyState, Banner,
+  Divider, SkeletonPage, LegacyCard
 } from '@shopify/polaris';
 import {
-  CashDollarIcon,
-  FinanceIcon,
-  StoreIcon,
-  ChartLineIcon,
-  CalendarIcon,
-  ChevronRightIcon,
-  StoreManagedIcon
+  CashDollarIcon, FinanceIcon, StoreIcon, ChartLineIcon,
+  CalendarIcon, ChevronRightIcon, StoreManagedIcon
 } from '@shopify/polaris-icons';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { format, subDays } from 'date-fns';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 
-// --- SENIOR HELPERS ---
+// --- SENIOR HELPERS (Null-Safe) ---
 const formatCurrency = (value: number | undefined) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value ?? 0);
 
@@ -61,52 +43,67 @@ export default function GlobalPortfolio() {
     end: format(new Date(), 'yyyy-MM-dd'),
   });
 
-  // 1. KRİTİK: Auth Kontrolü ve Yönlendirme Freni
+  // 1. DATA FETCHING: Store Context (İlk Kapı)
+  const {
+    data: storeResponse,
+    isLoading: isStoreLoading,
+    isError: isStoreError
+  } = useQuery({
+    queryKey: ['currentStore'],
+    queryFn: () => api.analytics.getMe(),
+    retry: false, // 401 durumunda sonsuz döngüyü engellemek için şart ✅
+  });
+
+  // 2. 🚀 KRİTİK: IFRAME BREAKOUT & REDIRECT LOOP FRENİ
   useEffect(() => {
+    // FREN 1: Eğer URL'de hmac/code varsa Shopify kurulumu işliyordur, müdahale etme!
+    const isInstalling = searchParams.get('hmac') || searchParams.get('code');
+    if (isInstalling) {
+      setIsAuthChecking(false);
+      return;
+    }
+
     if (!shop) {
       setIsAuthChecking(false);
       return;
     }
 
-    // Undefined hatasını önlemek için backend adresini mühürle
+    // Undefined link hatasını önlemek için adresi mühürle
     const backendBase = 'https://real.api.alkansystems.com';
     const targetUrl = `${backendBase}/install?shop=${shop}`;
     setInstallUrl(targetUrl);
 
-    // 🛑 SİGORTA: 5 saniye kuralı (Redirect takılırsa manuel buton açılır)
+    // SİGORTA: 5 saniye içinde dükkan verisi gelmezse manuel butonu göster
     const timeoutId = setTimeout(() => {
-      console.warn("Auth check timed out. Showing manual install button.");
       setAuthError(true);
       setIsAuthChecking(false);
     }, 5000);
 
-    const verifyConnection = async () => {
-      try {
-        const res = await api.analytics.getMe();
-        if (res.data) {
-          clearTimeout(timeoutId);
-          setIsAuthChecking(false);
-        }
-      } catch (err: any) {
-        // 401: Dükkan kurulu değilse yönlendir
-        if (err.response?.status === 401) {
-          // 🛡️ DÖNGÜ KESİCİ: Zaten install sayfasındaysak veya kod geldiyse yönlendirme!
-          const isProcessing = window.top?.location.href.includes('/install') || 
-                               window.location.search.includes('code=');
-
-          if (!isProcessing && window.top) {
-            console.log("🚀 Redirecting to install...");
-            window.top.location.href = targetUrl;
+    // Eğer dükkan bulunamadıysa (401) ve kurulum sürecinde değilsek yönlendir
+    if (isStoreError && !isInstalling) {
+      if (typeof window !== 'undefined' && window.top) {
+        try {
+          // FREN 2: Eğer zaten üst pencere kurulum sayfasındaysa yönlendirmeyi durdur
+          const topUrl = window.top.location.href;
+          if (topUrl.includes('/install') || topUrl.includes('/auth')) {
+            setIsAuthChecking(false);
+            return;
           }
+          console.log("🚀 Redirecting to top-level install...");
+          window.top.location.href = targetUrl;
+        } catch (e) {
+          window.top.location.href = targetUrl; // Cross-origin fallback
         }
       }
-    };
+    } else if (storeResponse) {
+      clearTimeout(timeoutId);
+      setIsAuthChecking(false);
+    }
 
-    verifyConnection();
     return () => clearTimeout(timeoutId);
-  }, [shop]);
+  }, [isStoreError, shop, searchParams, storeResponse]);
 
-  // 2. DATA FETCHING (Sadece Auth tamamsa çalışır)
+  // 3. DATA FETCHING: Analytics (Sadece dükkan doğrulanınca çalışır)
   const {
     data: globalResponse,
     isLoading: isGlobalLoading,
@@ -115,7 +112,7 @@ export default function GlobalPortfolio() {
   } = useQuery({
     queryKey: ['globalSummary', dateRange],
     queryFn: () => api.analytics.getGlobalSummary(dateRange.start, dateRange.end),
-    enabled: !isAuthChecking && !authError, // Yetki yoksa istek atma
+    enabled: !!storeResponse && !isStoreError, // Yetki yoksa API'yi yorma ✅
   });
 
   const {
@@ -127,50 +124,33 @@ export default function GlobalPortfolio() {
     enabled: !!globalResponse,
   });
 
-  const storeInfo = (api.analytics.getMe as any).data; // Cache'den al
+  const storeInfo = storeResponse?.data;
   const globalData = globalResponse?.data;
   const portfolio = portfolioResponse?.data || [];
 
-  // --- UI COMPONENTS ---
-  const KpiCard = ({ title, value, icon, tone = 'base' }: any) => (
-    <LegacyCard sectioned>
-      <BlockStack gap="200">
-        <InlineStack align="space-between" blockAlign="start">
-          <Text variant="bodySm" as="p" tone="subdued" fontWeight="medium">{title}</Text>
-          <Box background={tone === 'base' ? 'bg-surface-secondary' : (`bg-fill-${tone}-secondary` as any)} borderRadius="200" padding="100">
-            <Icon source={icon} tone={tone === 'base' ? 'subdued' : (tone as any)} />
-          </Box>
-        </InlineStack>
-        <Text variant="headingXl" as="h2" fontWeight="semibold">
-          {isGlobalLoading ? '—' : value}
-        </Text>
-      </BlockStack>
-    </LegacyCard>
-  );
-
   // --- 🔄 RENDERING STATES ---
 
-  // A. İlk Yükleme (Spinner)
-  if (isAuthChecking) {
+  // A. Yükleniyor / Bağlanıyor (Spinner)
+  if (isAuthChecking || isStoreLoading) {
     return (
       <div style={{ height: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <BlockStack gap="400" align="center">
-          <div className="spinner_style"></div> {/* CSS'te tanımlı spinner */}
-          <Text as="p" variant="bodyMd" tone="subdued">Connecting to RealProfit...</Text>
+          <div className="custom-spinner"></div>
+          <Text as="p" variant="bodyMd" tone="subdued">Authenticating with Shopify...</Text>
         </BlockStack>
-        <style>{`.spinner_style { width: 30px; height: 30px; border: 3px solid #eee; border-top-color: #000; border-radius: 50%; animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`.custom-spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #000; border-radius: 50%; animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  // B. Manuel Bağlantı Gerekli (Redirect başarısız olursa)
-  if (authError) {
+  // B. Manuel Bağlantı Gerekli (Hata durumunda butonu sabit tutar)
+  if (authError && !storeInfo) {
     return (
-      <Page title="Connection Issue">
+      <Page title="Connection Required">
         <Box paddingBlockStart="2000">
           <BlockStack align="center" inlineAlign="center" gap="400">
-            <Banner tone="warning" title="Installation Required">
-              <p>Please click the button below to securely link your Shopify store.</p>
+            <Banner tone="warning" title="Secure Link Required">
+              <p>Please click the button below to authorize RealProfit to access your store data.</p>
             </Banner>
             <Button variant="primary" size="large" onClick={() => { if(window.top) window.top.location.href = installUrl; }}>
               Connect Store
@@ -181,32 +161,13 @@ export default function GlobalPortfolio() {
     );
   }
 
-  // C. Data Loading (Skeleton)
-  if (isGlobalLoading || isGlobalError) {
-    return <SkeletonPage title="Loading Dashboard..." fullWidth />;
-  }
-
-  // D. Empty State
-  if (portfolio.length === 0) {
-    return (
-      <Page title="Global Portfolio">
-        <EmptyState
-          heading="No store data found"
-          action={{ content: 'Refresh Data', onAction: () => refetchGlobal() }}
-          image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-        >
-          <p>Sync your Shopify data to start tracking profit margins across your stores.</p>
-        </EmptyState>
-      </Page>
-    );
-  }
-
+  // C. Dashboard Ana Render
   return (
     <Page
       fullWidth
       title="Global Portfolio"
       subtitle="Performance overview of your connected stores"
-      primaryAction={{ content: 'Last 30 Days', icon: CalendarIcon, onAction: () => {} }}
+      primaryAction={{ content: 'Select Period', icon: CalendarIcon, onAction: () => {} }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
         <BlockStack gap="500">
@@ -214,16 +175,50 @@ export default function GlobalPortfolio() {
 
           <Grid>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              <KpiCard title="Total Revenue" value={formatCurrency(globalData?.totalPortfolioRevenue)} icon={CashDollarIcon} />
+              <LegacyCard sectioned>
+                <BlockStack gap="200">
+                  <InlineStack align="space-between">
+                    <Text variant="bodySm" as="p" tone="subdued">Total Revenue</Text>
+                    <Icon source={CashDollarIcon} tone="subdued" />
+                  </InlineStack>
+                  <Text variant="headingXl" as="h2">{isGlobalLoading ? '—' : formatCurrency(globalData?.totalPortfolioRevenue)}</Text>
+                </BlockStack>
+              </LegacyCard>
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              <KpiCard title="Total Profit" value={formatCurrency(globalData?.totalPortfolioProfit)} icon={FinanceIcon} tone={(globalData?.totalPortfolioProfit ?? 0) >= 0 ? 'success' : 'critical'} />
+              <LegacyCard sectioned>
+                <BlockStack gap="200">
+                  <InlineStack align="space-between">
+                    <Text variant="bodySm" as="p" tone="subdued">Total Profit</Text>
+                    <Icon source={FinanceIcon} tone={(globalData?.totalPortfolioProfit ?? 0) >= 0 ? 'success' : 'critical'} />
+                  </InlineStack>
+                  <Text variant="headingXl" as="h2" tone={(globalData?.totalPortfolioProfit ?? 0) >= 0 ? 'success' : 'critical'}>
+                    {isGlobalLoading ? '—' : formatCurrency(globalData?.totalPortfolioProfit)}
+                  </Text>
+                </BlockStack>
+              </LegacyCard>
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              <KpiCard title="Avg. Margin" value={`${globalData?.averageNetMargin ?? 0}%`} icon={ChartLineIcon} tone={getMarginTone(globalData?.averageNetMargin)} />
+              <LegacyCard sectioned>
+                <BlockStack gap="200">
+                  <InlineStack align="space-between">
+                    <Text variant="bodySm" as="p" tone="subdued">Avg. Net Margin</Text>
+                    <Icon source={ChartLineIcon} tone={getMarginTone(globalData?.averageNetMargin)} />
+                  </InlineStack>
+                  <Text variant="headingXl" as="h2">{isGlobalLoading ? '—' : `${globalData?.averageNetMargin ?? 0}%`}</Text>
+                </BlockStack>
+              </LegacyCard>
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-              <KpiCard title="Active Stores" value={globalData?.activeStoreCount ?? 0} icon={StoreIcon} />
+              <LegacyCard sectioned>
+                <BlockStack gap="200">
+                  <InlineStack align="space-between">
+                    <Text variant="bodySm" as="p" tone="subdued">Active Stores</Text>
+                    <Icon source={StoreIcon} tone="subdued" />
+                  </InlineStack>
+                  <Text variant="headingXl" as="h2">{globalData?.activeStoreCount ?? 0}</Text>
+                </BlockStack>
+              </LegacyCard>
             </Grid.Cell>
           </Grid>
 
@@ -251,8 +246,8 @@ export default function GlobalPortfolio() {
                         <Text variant="bodyMd" fontWeight="bold" as="span">{store.shopDomain}</Text>
                       </InlineStack>
                     </IndexTable.Cell>
-                    <IndexTable.Cell><Text as="span" variant="bodyMd" alignment="end">{formatCurrency(store.revenue)}</Text></IndexTable.Cell>
-                    <IndexTable.Cell><Text variant="bodyMd" tone={store.profit >= 0 ? 'success' : 'critical'} fontWeight="medium" alignment="end" as="span">{formatCurrency(store.profit)}</Text></IndexTable.Cell>
+                    <IndexTable.Cell><Text as="span" alignment="end">{formatCurrency(store.revenue)}</Text></IndexTable.Cell>
+                    <IndexTable.Cell><Text tone={store.profit >= 0 ? 'success' : 'critical'} alignment="end" as="span">{formatCurrency(store.profit)}</Text></IndexTable.Cell>
                     <IndexTable.Cell><Badge tone={getMarginTone(store.margin)}>{`${store.margin}%`}</Badge></IndexTable.Cell>
                     <IndexTable.Cell>
                       <InlineStack align="end">
@@ -265,7 +260,7 @@ export default function GlobalPortfolio() {
             )}
           </LegacyCard>
           <Divider />
-          <Box padding="400"><Text variant="bodySm" tone="subdued" as="p" alignment="center">RealProfit Engine • Optimized Build</Text></Box>
+          <Box padding="400"><Text variant="bodySm" tone="subdued" as="p" alignment="center">RealProfit Engine • Optimized Production Build</Text></Box>
         </BlockStack>
       </div>
     </Page>
