@@ -37,6 +37,7 @@ export default function GlobalPortfolio() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [installUrl, setInstallUrl] = useState('');
+  const [redirectTriggered, setRedirectTriggered] = useState(false);
 
   const [dateRange] = useState({
     start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
@@ -56,13 +57,6 @@ export default function GlobalPortfolio() {
 
   // 2. 🚀 KRİTİK: IFRAME BREAKOUT & REDIRECT LOOP FRENİ
   useEffect(() => {
-    // FREN 1: Eğer URL'de hmac/code varsa Shopify kurulumu işliyordur, müdahale etme!
-    const isInstalling = searchParams.get('hmac') || searchParams.get('code');
-    if (isInstalling) {
-      setIsAuthChecking(false);
-      return;
-    }
-
     if (!shop) {
       setIsAuthChecking(false);
       return;
@@ -73,26 +67,40 @@ export default function GlobalPortfolio() {
     const targetUrl = `${backendBase}/install?shop=${shop}`;
     setInstallUrl(targetUrl);
 
-    // SİGORTA: 5 saniye içinde dükkan verisi gelmezse manuel butonu göster
-    const timeoutId = setTimeout(() => {
-      setAuthError(true);
+    // 🛡️ FREN 1: Eğer URL'de hmac/code varsa Shopify bir süreç işletiyordur, redirect yapma!
+    const isInstalling = searchParams.get('hmac') || searchParams.get('code');
+    if (isInstalling) {
+      console.log("⏳ Shopify is processing auth params. Halting redirects.");
       setIsAuthChecking(false);
+      return;
+    }
+
+    // 🛑 SİGORTA: 5 saniye içinde dükkan verisi gelmezse manuel butonu göster
+    const timeoutId = setTimeout(() => {
+      if (!storeResponse) {
+        setAuthError(true);
+        setIsAuthChecking(false);
+      }
     }, 5000);
 
-    // Eğer dükkan bulunamadıysa (401) ve kurulum sürecinde değilsek yönlendir
-    if (isStoreError && !isInstalling) {
+    // 🛡️ FREN 2: Eğer hata varsa ve henüz yönlendirme yapmadıysak
+    if (isStoreError && !isInstalling && !redirectTriggered) {
       if (typeof window !== 'undefined' && window.top) {
         try {
-          // FREN 2: Eğer zaten üst pencere kurulum sayfasındaysa yönlendirmeyi durdur
+          // Eğer zaten en üst pencere o adresteyse tekrar yönlendirme!
           const topUrl = window.top.location.href;
-          if (topUrl.includes('/install') || topUrl.includes('/auth')) {
+          if (topUrl.includes('/install')) {
             setIsAuthChecking(false);
             return;
           }
-          console.log("🚀 Redirecting to top-level install...");
+
+          console.log("🚀 Breaking out of iframe to install...");
+          setRedirectTriggered(true);
           window.top.location.href = targetUrl;
         } catch (e) {
-          window.top.location.href = targetUrl; // Cross-origin fallback
+          // Cross-origin hatasında bile yönlendirmeyi dene
+          setRedirectTriggered(true);
+          window.top.location.href = targetUrl;
         }
       }
     } else if (storeResponse) {
@@ -101,7 +109,7 @@ export default function GlobalPortfolio() {
     }
 
     return () => clearTimeout(timeoutId);
-  }, [isStoreError, shop, searchParams, storeResponse]);
+  }, [isStoreError, shop, searchParams, storeResponse, redirectTriggered]);
 
   // 3. DATA FETCHING: Analytics (Sadece dükkan doğrulanınca çalışır)
   const {
