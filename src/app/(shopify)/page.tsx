@@ -56,60 +56,32 @@ export default function GlobalPortfolio() {
   });
 
   // 2. 🚀 KRİTİK: IFRAME BREAKOUT & REDIRECT LOOP FRENİ
-  useEffect(() => {
-    if (!shop) {
-      setIsAuthChecking(false);
-      return;
-    }
+ useEffect(() => {
+    // 🛡️ FREN 1: Eğer zaten kurulum sürecindeysek (URL'de hmac veya code varsa) DUR!
+    const hasAuthParams = searchParams.get('hmac') || searchParams.get('code');
+    if (hasAuthParams) return;
 
-    // Undefined link hatasını önlemek için adresi mühürle
-    const backendBase = 'https://real.api.alkansystems.com';
-    const targetUrl = `${backendBase}/install?shop=${shop}`;
-    setInstallUrl(targetUrl);
-
-    // 🛡️ FREN 1: Eğer URL'de hmac/code varsa Shopify bir süreç işletiyordur, redirect yapma!
-    const isInstalling = searchParams.get('hmac') || searchParams.get('code');
-    if (isInstalling) {
-      console.log("⏳ Shopify is processing auth params. Halting redirects.");
-      setIsAuthChecking(false);
-      return;
-    }
-
-    // 🛑 SİGORTA: 5 saniye içinde dükkan verisi gelmezse manuel butonu göster
-    const timeoutId = setTimeout(() => {
-      if (!storeResponse) {
-        setAuthError(true);
-        setIsAuthChecking(false);
-      }
-    }, 5000);
-
-    // 🛡️ FREN 2: Eğer hata varsa ve henüz yönlendirme yapmadıysak
-    if (isStoreError && !isInstalling && !redirectTriggered) {
+    if (isStoreError && shop) {
+      // ⚠️ Absolute URL (Tam adres) kullanarak frontend domaininden kurtuluyoruz
+      const backendUrl = 'https://real.api.alkansystems.com'; 
+      const authUrl = `${backendUrl}/install?shop=${shop}`;
+      
       if (typeof window !== 'undefined' && window.top) {
+        // 🛡️ FREN 2: Eğer zaten en üst pencere o adresteyse tekrar yönlendirme
         try {
-          // Eğer zaten en üst pencere o adresteyse tekrar yönlendirme!
-          const topUrl = window.top.location.href;
-          if (topUrl.includes('/install')) {
-            setIsAuthChecking(false);
+          if (window.top.location.href.includes('/install')) {
+            console.log("⏳ Zaten kurulum sayfasındayız, mükerrer istek engellendi.");
             return;
           }
-
-          console.log("🚀 Breaking out of iframe to install...");
-          setRedirectTriggered(true);
-          window.top.location.href = targetUrl;
+          console.log("🚀 İlk kurulum başlatılıyor...");
+          window.top.location.href = authUrl;
         } catch (e) {
-          // Cross-origin hatasında bile yönlendirmeyi dene
-          setRedirectTriggered(true);
-          window.top.location.href = targetUrl;
+          // Cross-origin hatası durumunda direkt yönlendir
+          window.top.location.href = authUrl;
         }
       }
-    } else if (storeResponse) {
-      clearTimeout(timeoutId);
-      setIsAuthChecking(false);
     }
-
-    return () => clearTimeout(timeoutId);
-  }, [isStoreError, shop, searchParams, storeResponse, redirectTriggered]);
+  }, [isStoreError, shop, searchParams]);
 
   // 3. DATA FETCHING: Analytics (Sadece dükkan doğrulanınca çalışır)
   const {
