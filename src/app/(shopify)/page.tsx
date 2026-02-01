@@ -65,14 +65,19 @@ export default function GlobalPortfolio() {
     queryKey: ['currentStore'],
     queryFn: () => api.analytics.getMe(),
   });
+useEffect(() => {
+  // Eğer zaten bir install/auth sürecindeysek yönlendirmeyi çalıştırma!
+  if (typeof window !== 'undefined' && window.location.pathname.includes('/install')) {
+    return;
+  }
 
- useEffect(() => {
   if (isStoreError && shop) {
-    // ⚠️ DİKKAT: Başına https:// ekleme, alttaki string içinde zaten var.
-    // ⚠️ DİKKAT: /install/shopify değil, sadece /install (Backend ile aynı olmalı).
-    const authUrl = `https://real.api.alkansystems.com/install?shop=${shop}`;
+    const backendUrl = 'https://real.api.alkansystems.com'; 
+    const authUrl = `${backendUrl}/install?shop=${shop}`;
     
-    if (window.top) {
+    // Sadece en üst pencere kurulumda değilse yönlendir
+    if (window.top && window.top.location.href !== authUrl) {
+      console.log("🚀 İlk kez kurulum başlatılıyor...");
       window.top.location.href = authUrl;
     }
   }

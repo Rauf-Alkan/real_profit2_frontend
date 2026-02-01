@@ -87,19 +87,8 @@ axiosInstance.interceptors.response.use(
 
       // 401 Unauthorized: Yetki bittiyse iframe'i kırıp yeniden kurdur
       if (status === 401 && shop) {
-        // Backend root adresini /api kısmını atarak buluyoruz
-        const backendRoot = baseURL.replace(/\/api\/?$/, '');
-        
-        // 🚀window.open yerine window.top.location.href kullanımı production'da daha güvenlidir
-        if (window.top) {
-          window.top.location.href = `${backendRoot}/install?shop=${shop}`;
-        } else {
-          window.location.href = `${backendRoot}/install?shop=${shop}`;
-        }
-        
-        // İsteği burada asılı bırakıyoruz
-        return new Promise(() => { });
-      }
+       console.warn("401 Hatası alındı, sayfa bazlı yönlendirme bekleniyor."); 
+     }
     }
     return Promise.reject(error);
   }
