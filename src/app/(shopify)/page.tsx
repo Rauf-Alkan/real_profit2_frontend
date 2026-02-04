@@ -63,7 +63,7 @@ export default function GlobalPortfolio() {
 
     if (isStoreError && shop) {
       // ⚠️ Absolute URL (Tam adres) kullanarak frontend domaininden kurtuluyoruz
-      const backendUrl = 'https://real.api.alkansystems.com'; 
+      const backendUrl = 'https://real.alkansystems.com'; 
       const authUrl = `${backendUrl}/install?shop=${shop}`;
       
       if (typeof window !== 'undefined' && window.top) {
