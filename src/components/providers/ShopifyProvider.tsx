@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { AppProvider as PolarisProvider, Page, Card, Layout, Text, TextField, Button, BlockStack, Box, Spinner } from '@shopify/polaris';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { AppProvider as PolarisProvider, Card, Box, BlockStack, Text, TextField, Button, Spinner } from '@shopify/polaris';
 import '@shopify/polaris/build/esm/styles.css';
-// ✅ Senin projenin i18n import şekli (Daha güvenli)
+
 import AppLayout from '@/components/AppLayout';
 import GlobalFooter from '@/components/GlobalFooter';
-import enTranslations from '@shopify/polaris/locales/en.json';
 
-const fallbackTranslations = {
+const fullI18n = {
   Polaris: {
     ResourceList: {
       sortingLabel: 'Sort by',
@@ -17,93 +16,116 @@ const fallbackTranslations = {
       item: 'item',
       items: 'items',
     },
-    Common: {
-      checkbox: 'checkbox',
-      ContextualSaveBar: { save: 'Save', discard: 'Discard' },
-      TextField: { characterCount: '{count} characters' }
-    },
+    Common: { checkbox: 'checkbox' },
+    ContextualSaveBar: { save: 'Save', discard: 'Discard' },
+    TextField: { characterCount: '{count} characters' },
+    Modal: { i18n: { close: 'Close' } },
+    Frame: { skipToContent: 'Skip to content' },
+    Navigation: { i18n: { filterItems: 'Filter items' } }
   },
 };
 
 export default function ShopifyProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const [shopInput, setShopInput] = useState('');
-  
+
+  // 1. ADIM: Component Mount Kontrolü
   useEffect(() => {
     setMounted(true);
-    console.log("✅ ShopifyProvider mounted");
+    console.log("✅ [Step 1: Hydration] Provider tarayıcıda başarıyla canlandı (mounted: true)");
   }, []);
 
-  const safeI18n = useMemo(() => {
-    // Next.js import uyuşmazlığına karşı çift kontrol
-    const rawData = (enTranslations as any).default || enTranslations;
+  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+
+  // 2. ADIM: URL Parametre Analizi
+  const params = useMemo(() => {
+    if (typeof window === 'undefined') return { shop: null, host: '', hasParams: false };
     
-    // Eğer hala boşsa veya Polaris'in beklediği anahtarlar yoksa hata fırlatmadan önce logla
-    if (!rawData || Object.keys(rawData).length === 0) {
-      console.error("🚨 Polaris i18n yüklenemedi! en.json içeriği boş.");
-    }
-    return rawData;
-  }, []);
-
-  const initialParams = useMemo(() => {
-    if (typeof window === 'undefined') return { shop: null, host: '', hasParams: false, shouldRedirect: false };
     const searchParams = new URLSearchParams(window.location.search);
     const shop = searchParams.get('shop');
     const host = searchParams.get('host');
-    const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+    const hasParams = Boolean(host && apiKey);
+    const shouldAutoRedirect = Boolean(shop && !host && apiKey);
 
-    return {
-      shop,
-      host,
-      hasParams: Boolean(host && apiKey),
-      shouldRedirect: Boolean(shop && !host && apiKey), 
-    };
-  }, []);
+    console.log("🔍 [Step 2: URL Analysis]", { 
+      shop, 
+      host: host ? "Mevcut" : "Eksik", 
+      apiKey: apiKey ? "Mevcut" : "Eksik",
+      hasParams,
+      shouldAutoRedirect 
+    });
+    
+    return { shop, host, hasParams, shouldAutoRedirect };
+  }, [apiKey]);
 
-  const [isRedirecting, setIsRedirecting] = useState(initialParams.shouldRedirect);
-  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+  const [isRedirecting, setIsRedirecting] = useState(params.shouldAutoRedirect);
 
+  // 3. ADIM: Yönlendirme Mantığı
   const handleRedirect = useCallback((domain: string) => {
-    const apiUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://real.alkansystems.com/api';
-    // 🛡️ KRİTİK DEĞİŞİKLİK: Senin mappings çıktına göre doğrudan /api/install'a gidiyoruz
-    // İlk koddaki replace kısmını sildik çünkü senin /install yolun zaten /api altında.
-    const finalUrl = `${apiUrl}/install?shop=${domain}`;
-    console.log("🚀 Redirecting to:", finalUrl);
+    if (!domain) {
+      console.warn("⚠️ [Step 3: Redirect] Domain boş olduğu için işlem durduruldu.");
+      return;
+    }
+    
+    setIsRedirecting(true);
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://real.alkansystems.com/api';
+    const cleanDomain = domain.includes('.') ? domain : `${domain}.myshopify.com`;
+    const finalUrl = `${apiUrl}/install?shop=${cleanDomain}`;
+    
+    console.log("🔗 [Step 3: Redirect] OAuth Yönlendirmesi Hazırlanıyor:", {
+      originalInput: domain,
+      cleanDomain,
+      finalUrl,
+      source: "handleRedirect"
+    });
+
     window.location.href = finalUrl;
   }, []);
 
+  // 4. ADIM: Otomatik Yönlendirme Kontrolü
   useEffect(() => {
-    if (initialParams.shouldRedirect && initialParams.shop) {
-      handleRedirect(initialParams.shop);
+    if (params.shouldAutoRedirect && params.shop) {
+      console.log("🚀 [Step 4: Auto-Redirect] Dükkan parametresi var ama host yok. Otomatik OAuth başlatılıyor...");
+      handleRedirect(params.shop);
     }
-  }, [initialParams.shop, initialParams.shouldRedirect, handleRedirect]);
+  }, [params.shouldAutoRedirect, params.shop, handleRedirect]);
 
-  // ✅ HATA ÖNLEYİCİ: PolarisProvider her zaman en dışta olmalı
+  // 5. ADIM: Render Branch Loglama
+  useEffect(() => {
+    if (!mounted) return;
+    if (apiKey && params.hasParams) {
+      console.log("💎 [Step 5: UI State] Shopify Iframe (Embedded) modu aktif.");
+    } else if (isRedirecting) {
+      console.log("⏳ [Step 5: UI State] Yönlendirme ekranı gösteriliyor.");
+    } else {
+      console.log("👨‍💻 [Step 5: UI State] Manuel giriş (Login) ekranı gösteriliyor.");
+    }
+  }, [mounted, apiKey, params.hasParams, isRedirecting]);
+
   return (
-    <PolarisProvider i18n={fallbackTranslations}>
-      {!mounted ? null : apiKey && initialParams.hasParams ? (
-        /* DURUM A: Shopify İçindeyiz - AppLayout senin projene özel eklendi ✅ */
+    <PolarisProvider i18n={fullI18n}>
+      {!mounted ? (
+        <div style={{ minHeight: '100vh', background: '#f6f6f7' }} />
+      ) : apiKey && params.host ? (
         <AppLayout>
           {children}
           <GlobalFooter />
         </AppLayout>
       ) : isRedirecting ? (
-        /* DURUM B: Yönlendirme */
         <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
-          <Spinner accessibilityLabel="Yükleniyor" size="large" />
-          <Text as="p" variant="bodyMd" tone="subdued">Mağazaya bağlanılıyor...</Text>
+          <Spinner size="large" />
+          <Text as="p" tone="subdued">Authenticating with Shopify...</Text>
         </div>
       ) : (
-        /* DURUM C: Giriş Ekranı */
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f6f6f7' }}>
-           <div style={{ maxWidth: '400px', width: '100%', padding: '0 20px' }}>
+          <div style={{ maxWidth: '400px', width: '100%', padding: '0 20px' }}>
             <Card>
               <Box padding="500">
                 <form onSubmit={(e) => { e.preventDefault(); if(shopInput) handleRedirect(shopInput); }}>
                   <BlockStack gap="400">
                     <div style={{ textAlign: 'center' }}>
-                      <Text as="h2" variant="headingLg">RealProfit Giriş 👨‍💻</Text>
-                      <Text as="p" tone="subdued">Başlamak için mağaza adınızı girin</Text>
+                      <Text as="h2" variant="headingLg">RealProfit Giriş</Text>
+                      <Text as="p" tone="subdued">Mağaza adresinizi girerek devam edin</Text>
                     </div>
                     <TextField
                       label="Mağaza"
@@ -116,6 +138,9 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
                     <Button variant="primary" submit fullWidth disabled={!shopInput}>
                       Yükle / Giriş Yap
                     </Button>
+                    {!apiKey && (
+                       <div style={{ color: 'red', fontSize: '12px' }}>⚠️ API Key eksik!</div>
+                    )}
                   </BlockStack>
                 </form>
               </Box>
