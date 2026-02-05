@@ -17,7 +17,7 @@ type ShopifyWindow = Window & {
   };
 };
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:8080/api';
 
 const axiosInstance = axios.create({
   baseURL,

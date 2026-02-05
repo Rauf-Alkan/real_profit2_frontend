@@ -16,7 +16,7 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
     setMounted(true);
   }, []);
 
-  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_APP_URL;
 
   const params = useMemo(() => {
     if (typeof window === 'undefined') return { shop: null, host: null };
@@ -29,7 +29,7 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
 
   const handleRedirect = useCallback((domain: string) => {
     if (!domain) return;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = process.env.NEXT_PUBLIC_APP_URL;
     const backendRoot = apiUrl?.replace(/\/api\/?$/, '');
     const cleanDomain = domain.includes('.') ? domain : `${domain}.myshopify.com`;
     window.location.href = `${backendRoot}/install?shop=${cleanDomain}`;

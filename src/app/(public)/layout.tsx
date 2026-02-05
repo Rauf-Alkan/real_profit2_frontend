@@ -13,7 +13,7 @@ export const metadata = {
   description: 'Track net profit, manage COGS, and analyze ad spend in real-time for your Shopify stores.',
   // Shopify App Bridge v4 için gerekli meta etiketleri
   other: {
-    'shopify-api-key': process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '',
+    'shopify-api-key': process.env.NEXT_PUBLIC_APP_URL || '',
   },
 };
 
