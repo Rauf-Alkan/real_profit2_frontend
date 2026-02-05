@@ -30,9 +30,8 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
   const handleRedirect = useCallback((domain: string) => {
     if (!domain) return;
     const apiUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const backendRoot = apiUrl?.replace(/\/api\/?$/, '');
     const cleanDomain = domain.includes('.') ? domain : `${domain}.myshopify.com`;
-    window.location.href = `${backendRoot}/install?shop=${cleanDomain}`;
+    window.location.href = `${apiUrl}/install?shop=${cleanDomain}`;
   }, []);
 
   // 🚨 DEFANSİF i18n: enTranslations objesinin varlığını garantiye alıyoruz
@@ -40,19 +39,17 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
 
   // 1. ADIM: PolarisProvider'ı ASLA bir koşula (if) bağlama. 
   // O her zaman orada durmalı ki alt bileşenler hata vermesin.
+  if (!mounted) return null;
+
   return (
-    <PolarisProvider i18n={translations}>
-      {!mounted ? (
-        // Hydration sırasında boş ekran dönmek en güvenlisidir ✅
-        null 
-      ) : apiKey && params.host ? (
-        /* 2. ADIM: Shopify İçindeyiz */
+    // ✅ i18n nesnesini doğrudan vererek "No i18n provided" hatasını bitiriyoruz
+    <PolarisProvider i18n={enTranslations}>
+      {apiKey && params.host ? (
         <AppLayout>
           {children}
           <GlobalFooter />
         </AppLayout>
       ) : (
-        /* 3. ADIM: Giriş Ekranı (Tüm bileşenler Provider içinde güvende) */
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f6f6f7' }}>
           <div style={{ width: '400px', padding: '0 20px' }}>
             <Card>
@@ -60,7 +57,6 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
                 <BlockStack gap="400">
                   <div style={{ textAlign: 'center' }}>
                     <Text as="h2" variant="headingLg">RealProfit Giriş 👨‍💻</Text>
-                    <Text as="p" tone="subdued">Başlamak için mağaza adınızı girin</Text>
                   </div>
                   <TextField
                     label="Mağaza"
