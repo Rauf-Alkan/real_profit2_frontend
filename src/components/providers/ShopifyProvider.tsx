@@ -3,27 +3,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppProvider as PolarisProvider, Card, Box, BlockStack, Text, TextField, Button, Spinner } from '@shopify/polaris';
 import '@shopify/polaris/build/esm/styles.css';
-
+import enTranslations from '@shopify/polaris/locales/en.json';
 import AppLayout from '@/components/AppLayout';
 import GlobalFooter from '@/components/GlobalFooter';
 
-const fullI18n = {
-  Polaris: {
-    ResourceList: {
-      sortingLabel: 'Sort by',
-      defaultItemTagName: 'item',
-      showing: 'Showing {itemsCount} {resource}',
-      item: 'item',
-      items: 'items',
-    },
-    Common: { checkbox: 'checkbox' },
-    ContextualSaveBar: { save: 'Save', discard: 'Discard' },
-    TextField: { characterCount: '{count} characters' },
-    Modal: { i18n: { close: 'Close' } },
-    Frame: { skipToContent: 'Skip to content' },
-    Navigation: { i18n: { filterItems: 'Filter items' } }
-  },
-};
 
 export default function ShopifyProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -103,7 +86,7 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
   }, [mounted, apiKey, params.hasParams, isRedirecting]);
 
   return (
-    <PolarisProvider i18n={fullI18n}>
+    <PolarisProvider i18n={enTranslations}>
       {!mounted ? (
         <div style={{ minHeight: '100vh', background: '#f6f6f7' }} />
       ) : apiKey && params.host ? (
