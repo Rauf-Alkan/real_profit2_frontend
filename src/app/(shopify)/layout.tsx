@@ -18,12 +18,12 @@ export const metadata: Metadata = {
   description: 'Real-time profit tracking for Shopify merchants.',
   other: {
     // App Bridge v4'ün uygulamayı tanıması için kritik ✅
-    'shopify-api-key': process.env.NEXT_PUBLIC_APP_URL || '',
+    'shopify-api-key': process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '',
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const apiKey = process.env.NEXT_PUBLIC_APP_URL;
+  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
   return (
     <html lang="en">

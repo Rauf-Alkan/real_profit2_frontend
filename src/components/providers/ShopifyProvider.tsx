@@ -16,7 +16,7 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
     setMounted(true);
   }, []);
 
-  const apiKey = process.env.NEXT_PUBLIC_APP_URL;
+  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
   const params = useMemo(() => {
     if (typeof window === 'undefined') return { shop: null, host: null };
