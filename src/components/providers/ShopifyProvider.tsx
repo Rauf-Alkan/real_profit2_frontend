@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppProvider as PolarisProvider, Page, Card, Layout, Text, TextField, Button, BlockStack, Box, Spinner } from '@shopify/polaris';
 import '@shopify/polaris/build/esm/styles.css';
 // ✅ Senin projenin i18n import şekli (Daha güvenli)
-import translations from '@shopify/polaris/locales/en.json';
 import AppLayout from '@/components/AppLayout';
 import GlobalFooter from '@/components/GlobalFooter';
 import enTranslations from '@shopify/polaris/locales/en.json';
@@ -20,6 +19,8 @@ const fallbackTranslations = {
     },
     Common: {
       checkbox: 'checkbox',
+      ContextualSaveBar: { save: 'Save', discard: 'Discard' },
+      TextField: { characterCount: '{count} characters' }
     },
   },
 };
@@ -30,6 +31,7 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
   
   useEffect(() => {
     setMounted(true);
+    console.log("✅ ShopifyProvider mounted");
   }, []);
 
   const safeI18n = useMemo(() => {
