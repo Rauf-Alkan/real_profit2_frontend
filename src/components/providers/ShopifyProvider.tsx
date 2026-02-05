@@ -7,6 +7,7 @@ import '@shopify/polaris/build/esm/styles.css';
 import translations from '@shopify/polaris/locales/en.json';
 import AppLayout from '@/components/AppLayout';
 import GlobalFooter from '@/components/GlobalFooter';
+import enTranslations from '@shopify/polaris/locales/en.json';
 
 export default function ShopifyProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -14,6 +15,10 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
   
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  const safeI18n = useMemo(() => {
+    return (enTranslations as any).default || enTranslations;
   }, []);
 
   const initialParams = useMemo(() => {
@@ -51,7 +56,7 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
 
   // ✅ HATA ÖNLEYİCİ: PolarisProvider her zaman en dışta olmalı
   return (
-    <PolarisProvider i18n={translations}>
+    <PolarisProvider i18n={safeI18n}>
       {!mounted ? null : apiKey && initialParams.hasParams ? (
         /* DURUM A: Shopify İçindeyiz - AppLayout senin projene özel eklendi ✅ */
         <AppLayout>
