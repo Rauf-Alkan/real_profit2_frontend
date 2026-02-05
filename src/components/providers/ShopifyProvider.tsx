@@ -18,7 +18,14 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
   }, []);
 
   const safeI18n = useMemo(() => {
-    return (enTranslations as any).default || enTranslations;
+    // Next.js import uyuşmazlığına karşı çift kontrol
+    const rawData = (enTranslations as any).default || enTranslations;
+    
+    // Eğer hala boşsa veya Polaris'in beklediği anahtarlar yoksa hata fırlatmadan önce logla
+    if (!rawData || Object.keys(rawData).length === 0) {
+      console.error("🚨 Polaris i18n yüklenemedi! en.json içeriği boş.");
+    }
+    return rawData;
   }, []);
 
   const initialParams = useMemo(() => {
