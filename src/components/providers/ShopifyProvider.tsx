@@ -9,6 +9,21 @@ import AppLayout from '@/components/AppLayout';
 import GlobalFooter from '@/components/GlobalFooter';
 import enTranslations from '@shopify/polaris/locales/en.json';
 
+const fallbackTranslations = {
+  Polaris: {
+    ResourceList: {
+      sortingLabel: 'Sort by',
+      defaultItemTagName: 'item',
+      showing: 'Showing {itemsCount} {resource}',
+      item: 'item',
+      items: 'items',
+    },
+    Common: {
+      checkbox: 'checkbox',
+    },
+  },
+};
+
 export default function ShopifyProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const [shopInput, setShopInput] = useState('');
@@ -63,7 +78,7 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
 
   // ✅ HATA ÖNLEYİCİ: PolarisProvider her zaman en dışta olmalı
   return (
-    <PolarisProvider i18n={safeI18n}>
+    <PolarisProvider i18n={fallbackTranslations}>
       {!mounted ? null : apiKey && initialParams.hasParams ? (
         /* DURUM A: Shopify İçindeyiz - AppLayout senin projene özel eklendi ✅ */
         <AppLayout>
