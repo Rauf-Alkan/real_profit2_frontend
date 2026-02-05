@@ -36,9 +36,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className={`${inter.className} bg-gray-50`}>
-        {/* DİKKAT: AppLayout ve GlobalFooter'ı ShopifyProvider'ın İÇİNE taşıdık.
-          Böylece her zaman Polaris Context'i içinde kalıyorlar. 
-        */}
         <ShopifyProvider>
           {children}
         </ShopifyProvider>
