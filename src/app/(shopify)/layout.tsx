@@ -2,7 +2,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import '../globals.css';
-import Script from 'next/script';
 import ShopifyProvider from '@/components/providers/ShopifyProvider';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -31,10 +30,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* App Bridge v4 Script - Senkron yükleme en güvenlisidir ✅ */}
         {apiKey && (
-          <Script
+          <script
             src={`https://cdn.shopify.com/shopifycloud/app-bridge.js?apiKey=${apiKey}`}
-            strategy="beforeInteractive"
-          />
+          ></script>
         )}
       </head>
       <body className={`${inter.className} bg-gray-50`}>
