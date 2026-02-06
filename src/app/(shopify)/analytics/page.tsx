@@ -39,6 +39,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { format } from 'date-fns';
+export const dynamic = 'force-dynamic';
 
 // --- SENIOR HELPER: Para Birimi Formatlayıcı ---
 const formatCurrency = (value: number) =>

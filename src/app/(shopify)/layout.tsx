@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* App Bridge v4 Script - Senkron yükleme en güvenlisidir ✅ */}
+        {/* App Bridge v4 Script - Senkron yükleme en güvenlisidir ✅    eme*/}
         {apiKey && (
           <script
             src={`https://cdn.shopify.com/shopifycloud/app-bridge.js?apiKey=${apiKey}`}

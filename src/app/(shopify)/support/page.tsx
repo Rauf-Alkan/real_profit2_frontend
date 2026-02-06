@@ -27,6 +27,7 @@ import {
   ChatIcon
 } from '@shopify/polaris-icons';
 import { api } from '@/lib/api';
+export const dynamic = 'force-dynamic';
 
 // --- REALPROFIT DATA: Finansal Odaklı FAQ ---
 const faqItems = [
