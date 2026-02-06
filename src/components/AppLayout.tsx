@@ -47,11 +47,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             onClick: () => router.push('/data'),
             selected: pathname.startsWith('/data'),
           },
-        ]}
-      />
-      <Navigation.Section
-        separator
-        items={[
           {
             label: 'Billing',
             icon: CreditCardIcon,
