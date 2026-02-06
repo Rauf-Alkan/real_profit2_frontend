@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../globals.css';
 import ShopifyProvider from '@/components/providers/ShopifyProvider';
 
@@ -22,6 +23,15 @@ export const metadata: Metadata = {
   },
 };
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
@@ -37,7 +47,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.className} bg-gray-50`}>
         <ShopifyProvider>
+          <QueryClientProvider client={queryClient}>
           {children}
+          </QueryClientProvider>
         </ShopifyProvider>
       </body>
     </html>

@@ -5,7 +5,6 @@ import { AppProvider as PolarisProvider, Card, Box, BlockStack, Text, TextField,
 import '@shopify/polaris/build/esm/styles.css';
 import enTranslations from '@shopify/polaris/locales/en.json';
 import AppLayout from '@/components/AppLayout';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // ✅ YENİ EKLEME
 import GlobalFooter from '@/components/GlobalFooter';
 
 
@@ -18,15 +17,6 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
     setMounted(true);
     console.log("✅ [Step 1: Hydration] Provider tarayıcıda başarıyla canlandı (mounted: true)");
   }, []);
-
-  const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
   const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
@@ -97,7 +87,6 @@ export default function ShopifyProvider({ children }: { children: React.ReactNod
 
   return (
     <PolarisProvider i18n={enTranslations}>
-      <QueryClientProvider client={queryClient}></QueryClientProvider>
       {!mounted ? (
         <div style={{ minHeight: '100vh', background: '#f6f6f7' }} />
       ) : apiKey && params.host ? (
