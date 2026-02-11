@@ -48,12 +48,27 @@ export default function GlobalPortfolio() {
   const {
     data: storeResponse,
     isLoading: isStoreLoading,
-    isError: isStoreError
+    isError: isStoreError,
+    error: storeApiError
   } = useQuery({
     queryKey: ['currentStore'],
     queryFn: () => api.analytics.getMe(),
     retry: false, // 401 durumunda sonsuz döngüyü engellemek için şart ✅
   });
+
+  useEffect(() => {
+    if (!isStoreLoading) {
+      setIsAuthChecking(false); // Spinner'ı durdur ✅
+      
+      if (isStoreError) {
+        setAuthError(true); // Hata ekranını aktifleştir ✅
+        if (shop) {
+          const apiBase = 'https://real.alkansystems.com/api'; 
+          setInstallUrl(`${apiBase}/install?shop=${shop}`);
+        }
+      }
+    }
+  }, [isStoreLoading, isStoreError, shop]);
 
   // 2. 🚀 KRİTİK: IFRAME BREAKOUT & REDIRECT LOOP FRENİ
  useEffect(() => {
