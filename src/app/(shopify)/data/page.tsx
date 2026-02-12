@@ -34,7 +34,6 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { format, subDays } from 'date-fns';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
-export const dynamic = 'force-dynamic';
 
 // --- SENIOR HELPERS ---
 const formatCurrency = (value: number) =>
