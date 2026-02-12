@@ -44,6 +44,12 @@ export default function GlobalPortfolio() {
     end: format(new Date(), 'yyyy-MM-dd'),
   });
 
+  const { data: statusResponse, isLoading: isStatusLoading } = useQuery({
+    queryKey: ['installStatus', shop],
+    queryFn: () => api.auth.checkStatus(),
+    enabled: !!shop, // Shop parametresi varsa çalış ✅
+  });
+
   // 1. DATA FETCHING: Store Context (İlk Kapı)
   const {
     data: storeResponse,
@@ -71,17 +77,19 @@ export default function GlobalPortfolio() {
   }, [isStoreLoading, isStoreError, shop]);
 
   // 2. 🚀 KRİTİK: IFRAME BREAKOUT & REDIRECT LOOP FRENİ
- useEffect(() => {
-    // 🛡️ FREN 1: Eğer zaten kurulum sürecindeysek (URL'de hmac veya code varsa) DUR!
+
+  useEffect(() => {
+    // 🛡️ FREN: Eğer zaten kurulumdan dönüyorsak (URL'de hmac/code varsa) dur!
     const hasAuthParams = searchParams.get('hmac') || searchParams.get('code');
     if (hasAuthParams) return;
 
-    if (isStoreError && shop) {
-      // ⚠️ Absolute URL (Tam adres) kullanarak frontend domaininden kurtuluyoruz
+    // 🚀 OTOMATİK YÖNLENDİRME (Zero-Click)
+    if (statusResponse && !statusResponse.data.installed && shop) {
       const apiBase = 'https://real.alkansystems.com/api'; 
       const authUrl = `${apiBase}/install?shop=${shop}`;
-      setInstallUrl(authUrl);
       
+      console.log("🚀 [Zero-Click] Dükkan kayıtlı değil, OAuth başlatılıyor...");
+
       if (typeof window !== 'undefined' && window.top) {
         // 🛡️ FREN 2: Eğer zaten en üst pencere o adresteyse tekrar yönlendirme
         try {
@@ -97,7 +105,7 @@ export default function GlobalPortfolio() {
         }
       }
     }
-  }, [isStoreError, shop, searchParams]);
+  }, [statusResponse, shop, searchParams]);
 
   // 3. DATA FETCHING: Analytics (Sadece dükkan doğrulanınca çalışır)
   const {

@@ -157,6 +157,9 @@ export const api = {
   support: {
     sendTicket: (data: SupportTicketRequest) =>
       axiosInstance.post('/support/ticket', data),
+  },
+  auth: {
+    checkStatus: () => axiosInstance.get<{ installed: boolean }>('/auth/status'),
   }
 };
 
