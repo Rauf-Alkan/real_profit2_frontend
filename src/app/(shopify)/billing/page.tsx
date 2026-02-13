@@ -74,9 +74,10 @@ export default function BillingPage() {
       if (confirmationUrl) {
         window.open(confirmationUrl, '_top');
       }
-    } catch (error) {
-      console.error('Subscription redirect failed:', error);
-      setError("Subscription process could not be started. Please try again later.");
+    } catch (err: any) {
+      console.error('Subscription redirect failed:', err);
+      const message = err.response?.data?.detail || err.message || "An unexpected error occurred.";
+      setError(message);
     } finally {
       setUpgradingPlan(null);
     }
@@ -88,14 +89,19 @@ export default function BillingPage() {
       subtitle="Flexible pricing for stores of all sizes."
     >
       <Layout>
-        {/* Hata Durumu */}
         {(storeError || error) && (
-          <Layout.Section>
-            <Banner tone="critical" onDismiss={() => setError(null)}>
-              <p>{error || "Could not verify store information. Please refresh the page."}</p>
-            </Banner>
-          </Layout.Section>
-        )}
+  <Layout.Section>
+    <Banner 
+      tone="critical" 
+      title="Subscription Error" 
+      onDismiss={() => setError(null)}
+    >
+      <Text as="p">
+        {error || "Could not verify store information. Please refresh the page."}
+      </Text>
+    </Banner>
+  </Layout.Section>
+)}
 
         <Layout.Section>
           <Grid>
@@ -160,10 +166,10 @@ export default function BillingPage() {
         <Layout.Section>
           <Box paddingBlockStart="400">
             <InlineStack align="center" gap="200">
-              <Icon source={DiscountIcon} tone="subdued" />
               <Text variant="bodyMd" as="p" tone="subdued">
                 All plans include a 7-day free trial for new users.
               </Text>
+              <Icon source={DiscountIcon} tone="subdued" />
             </InlineStack>
           </Box>
         </Layout.Section>
