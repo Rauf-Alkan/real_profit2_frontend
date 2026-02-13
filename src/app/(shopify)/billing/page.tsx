@@ -51,6 +51,7 @@ const PLANS = [
 
 export default function BillingPage() {
   const [upgradingPlan, setUpgradingPlan] = useState<PlanType | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // 1. Dinamik Context: Mevcut dükkan bilgisini çekiyoruz ✅
   const { data: storeResponse, isLoading: isStoreLoading, error: storeError } = useQuery({
@@ -62,6 +63,7 @@ export default function BillingPage() {
 
   const handleUpgrade = async (plan: PlanType) => {
     if (!storeInfo?.id) return; // Güvenlik kilidi
+    setError(null);
 
     setUpgradingPlan(plan);
     try {
@@ -74,6 +76,7 @@ export default function BillingPage() {
       }
     } catch (error) {
       console.error('Subscription redirect failed:', error);
+      setError("Subscription process could not be started. Please try again later.");
     } finally {
       setUpgradingPlan(null);
     }
@@ -86,10 +89,10 @@ export default function BillingPage() {
     >
       <Layout>
         {/* Hata Durumu */}
-        {storeError && (
+        {(storeError || error) && (
           <Layout.Section>
-            <Banner tone="critical">
-              <p>Could not verify store information. Please refresh the page.</p>
+            <Banner tone="critical" onDismiss={() => setError(null)}>
+              <p>{error || "Could not verify store information. Please refresh the page."}</p>
             </Banner>
           </Layout.Section>
         )}
