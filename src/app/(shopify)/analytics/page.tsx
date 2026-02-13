@@ -52,18 +52,26 @@ export default function StoreAnalytics() {
     end: format(new Date(), 'yyyy-MM-dd'),
   });
 
-  // Örn: storeId URL'den veya global state'den alınır. Şimdilik 1 kabul ediyoruz.
-  const storeId = 1;
+  const { data: storeResponse } = useQuery({ 
+    queryKey: ['currentStore'], 
+    queryFn: () => api.analytics.getMe()  
+  });
 
-  // 2. Data Fetching: React Query (Backend DTO'ları ile Mühürlü)
+  // Örn: storeId URL'den veya global state'den alınır. Şimdilik 1 kabul ediyoruz.
+  const storeId = storeResponse?.data.id;
+
+  // 2. ADIM: Dükkan ID'si gelene kadar bekleyen (enabled) Query'ler ✅
   const { data: summary, isLoading: isSummaryLoading } = useQuery({
     queryKey: ['summary', storeId, dateRange],
-    queryFn: () => api.analytics.getSummary(storeId, dateRange.start, dateRange.end),
+    queryFn: () => api.analytics.getSummary(storeId!, dateRange.start, dateRange.end),
+    enabled: !!storeId, // ID yoksa istek atma, 500 hatasını önler.
   });
+
 
   const { data: trends, isLoading: isTrendsLoading } = useQuery({
     queryKey: ['trends', storeId, dateRange],
-    queryFn: () => api.analytics.getTrends(storeId, dateRange.start, dateRange.end),
+    queryFn: () => api.analytics.getTrends(storeId!, dateRange.start, dateRange.end),
+    enabled: !!storeId,
   });
 
   // --- UI COMPONENTS ---
@@ -154,10 +162,10 @@ export default function StoreAnalytics() {
         <Layout.Section>
           <LegacyCard title="Revenue vs. Profit Trend" sectioned>
             <div style={{ height: '400px', width: '100%' }}>
-              {isTrendsLoading ? (
+              {(isTrendsLoading || !storeId) ? (
                 <SkeletonBodyText lines={10} />
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="99%" height="100%">
                   <ComposedChart data={trends?.data}>
                     <defs>
                       <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
