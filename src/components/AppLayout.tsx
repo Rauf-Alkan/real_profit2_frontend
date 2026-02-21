@@ -6,6 +6,7 @@ import {
   HomeIcon,
   CollectionIcon,
   ChartVerticalIcon,
+  ReceiptIcon,
   CreditCardIcon
 } from '@shopify/polaris-icons';
 import { usePathname, useRouter } from 'next/navigation';
@@ -40,6 +41,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
             icon: ChartVerticalIcon,
             onClick: () => router.push('/analytics'),
             selected: pathname.startsWith('/analytics'),
+          },
+          {
+            // 🚀 Yeni Mutabakat Sekmesi Eklendi
+            label: 'Payouts & Reconcile',
+            icon: ReceiptIcon,
+            onClick: () => router.push('/payouts'),
+            selected: pathname.startsWith('/payouts'),
+            badge: 'New', // Satıcının dikkatini çekmek için ufak bir rozet
           },
           {
             label: 'Data Management',

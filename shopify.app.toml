@@ -4,7 +4,7 @@ client_id = "c8377a0aa89193c2b8561f205691aa36"
 name = "Real Profit"
 application_url = "https://realprofit.alkansystems.com"
 embedded = true
-handle = "real-profit"
+handle = "real-profit_2026"
 
 [webhooks]
 api_version = "2025-10"
@@ -21,8 +21,10 @@ api_version = "2025-10"
   "orders/updated",
   "refunds/create"
 ]
-  uri = "https://real.alkansystems.com/webhooks"
-
+  uri = "https://real.alkansystems.com/api/webhooks"
+# "orders/create",
+ # "orders/updated",
+ # "refunds/create"
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_inventory,read_orders,read_products,read_shopify_payments_payouts"

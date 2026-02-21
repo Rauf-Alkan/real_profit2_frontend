@@ -8,7 +8,8 @@ import {
   CsvProcessingResult,
   SupportTicketRequest,
   PlanType,
-  StoreInfo
+  StoreInfo,
+  PayoutReport
 } from '@/types';
 
 type ShopifyWindow = Window & {
@@ -98,7 +99,7 @@ axiosInstance.interceptors.response.use(
 // =========================================================
 export const api = {
 
-  // --- ANALYTICS (DashboardController) ---
+ // --- ANALYTICS (DashboardController) ---
   analytics: {
     // Tek mağaza özeti
     getSummary: (storeId: number, startDate: string, endDate: string) =>
@@ -124,8 +125,15 @@ export const api = {
         params: { startDate, endDate }
       }),
 
+    // Kullanıcının/Mağazanın kendi bilgisi
     getMe: () =>
       axiosInstance.get<StoreInfo>('/analytics/me'),
+  },
+
+  // --- REPORTS (ReportController) - YENİ EKLENDİ ✅ ---
+  reports: {
+    getPayoutDiscrepancy: (payoutId: string) =>
+      axiosInstance.get<PayoutReport>(`/reports/payout-discrepancy/${payoutId}`),
   },
 
   // --- COGS MANAGEMENT (CogsController) ---
@@ -158,6 +166,8 @@ export const api = {
     sendTicket: (data: SupportTicketRequest) =>
       axiosInstance.post('/support/ticket', data),
   },
+  
+  // --- AUTH ---
   auth: {
     checkStatus: () => axiosInstance.get<{ installed: boolean }>('/auth/status'),
   }

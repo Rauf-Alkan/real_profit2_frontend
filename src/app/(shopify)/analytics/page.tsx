@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Page,
   Layout,
@@ -9,10 +9,8 @@ import {
   Text,
   BlockStack,
   InlineStack,
-  Box,
   Banner,
   SkeletonBodyText,
-  SkeletonDisplayText,
   Badge,
   Icon,
 } from '@shopify/polaris';
@@ -20,10 +18,11 @@ import {
   CalendarIcon,
   CashDollarIcon,
   ReceiptIcon,
-  CreditCardIcon,
   CartIcon,
   AlertBubbleIcon,
   ChartVerticalIcon,
+  MoneyIcon,
+  DiscountIcon
 } from '@shopify/polaris-icons';
 import {
   ComposedChart,
@@ -34,57 +33,95 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
+  BarChart, // Waterfall için
+  Bar,
+  Cell,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
+
 export const dynamic = 'force-dynamic';
 
-// --- SENIOR HELPER: Para Birimi Formatlayıcı ---
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+// --- SENIOR HELPERS ---
+const formatCurrency = (value: number | undefined | null) => {
+  if (value == null) return '$0.00';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+};
+
+const formatPercent = (value: number | undefined | null) => {
+    if (value == null) return '0%';
+    return `${value.toFixed(2)}%`;
+}
+
+// Waterfall Chart için özel Tooltip (Recharts)
+const WaterfallTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const isTotal = data.type === 'INCOME' || data.label === 'Net Profit';
+    return (
+      <div style={{ background: '#fff', padding: '12px', border: '1px solid #e1e3e5', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+        <Text as="p" variant="bodyMd" fontWeight="bold">{data.label}</Text>
+        <Text as="p" variant="bodyLg" tone={data.type === 'EXPENSE' ? 'critical' : 'success'}>
+          {isTotal ? formatCurrency(data.value) : `-${formatCurrency(data.value)}`}
+        </Text>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function StoreAnalytics() {
-  // 1. State: Tarih Aralığı (Default: Son 30 Gün)
+  // 1. STATE: Tarih Aralığı
   const [dateRange, setDateRange] = useState({
-    start: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
     end: format(new Date(), 'yyyy-MM-dd'),
   });
 
+  // 2. DATA FETCHING
   const { data: storeResponse } = useQuery({ 
     queryKey: ['currentStore'], 
     queryFn: () => api.analytics.getMe()  
   });
 
-  // Örn: storeId URL'den veya global state'den alınır. Şimdilik 1 kabul ediyoruz.
-  const storeId = storeResponse?.data.id;
+  const storeId = storeResponse?.data?.id;
 
-  // 2. ADIM: Dükkan ID'si gelene kadar bekleyen (enabled) Query'ler ✅
-  const { data: summary, isLoading: isSummaryLoading } = useQuery({
+  const { data: summaryResponse, isLoading: isSummaryLoading } = useQuery({
     queryKey: ['summary', storeId, dateRange],
     queryFn: () => api.analytics.getSummary(storeId!, dateRange.start, dateRange.end),
-    enabled: !!storeId, // ID yoksa istek atma, 500 hatasını önler.
+    enabled: !!storeId,
   });
 
-
-  const { data: trends, isLoading: isTrendsLoading } = useQuery({
+  const { data: trendsResponse, isLoading: isTrendsLoading } = useQuery({
     queryKey: ['trends', storeId, dateRange],
     queryFn: () => api.analytics.getTrends(storeId!, dateRange.start, dateRange.end),
     enabled: !!storeId,
   });
 
+  const summary = summaryResponse?.data;
+  const trends = trendsResponse?.data;
+
   // --- UI COMPONENTS ---
 
-  const KpiCard = ({ title, value, icon, color = 'base', subValue }: any) => (
+  const KpiCard = ({ title, value, icon, color = 'base', subValue, badge }: any) => (
     <LegacyCard sectioned>
       <BlockStack gap="200">
         <InlineStack align="space-between">
           <Text variant="bodyMd" as="p" tone="subdued">{title}</Text>
           <Icon source={icon} tone={color as any} />
         </InlineStack>
-        <Text variant="headingLg" as="h2">{isSummaryLoading ? '---' : value}</Text>
-        {subValue && (
+        
+        {isSummaryLoading ? (
+            <SkeletonBodyText lines={1} />
+        ) : (
+            <InlineStack align="start" gap="200" blockAlign="center">
+                <Text variant="headingLg" as="h2">{value}</Text>
+                {badge && <Badge tone={badge.tone}>{badge.text}</Badge>}
+            </InlineStack>
+        )}
+
+        {subValue && !isSummaryLoading && (
           <Text variant="bodyXs" as="p" tone="subdued">{subValue}</Text>
         )}
       </BlockStack>
@@ -93,80 +130,120 @@ export default function StoreAnalytics() {
 
   return (
     <Page
-      title="Store Insights"
-      subtitle="Detailed financial performance analysis"
+      title="Store Economics"
+      subtitle="Deep dive into your actual profitability"
       compactTitle
       primaryAction={{
         content: 'Last 30 Days',
         icon: CalendarIcon,
-        onAction: () => console.log('Date Picker Trigger'),
+        onAction: () => console.log('Date Picker Trigger (To be implemented)'),
       }}
     >
       <Layout>
-        {/* 1. KRİTİK UYARI: hasMissingCogs Banner ✅ */}
-        {summary?.data.hasMissingCogs && (
+        {/* 1. KRİTİK UYARI: hasMissingCogs Banner */}
+        {summary?.hasMissingCogs && (
           <Layout.Section>
             <Banner
-              title="Missing Product Costs Detected"
-              tone="warning"
-              action={{ content: 'Upload COGS', url: '/data' }}
-              onDismiss={() => { }}
+              title="Action Required: Missing Product Costs (COGS)"
+              tone="critical"
+              action={{ content: 'Upload COGS CSV', url: '/data/cogs' }}
             >
-              <p>Some orders are missing COGS data. Your profit margins may be higher than reality.</p>
+              <p>We detected orders in this period without cost data. Your reported profit is currently inflated. Please upload your product costs to see your true margins.</p>
             </Banner>
           </Layout.Section>
         )}
 
-        {/* 2. KPI GRID (3x2 Yapısı) ✅ */}
+        {/* 2. THE BIG 3 (Ana Metrikler) */}
         <Layout.Section>
           <Grid>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 4, lg: 4 }}>
               <KpiCard
-                title="Total Revenue"
-                value={formatCurrency(summary?.data.totalRevenue || 0)}
+                title="Gross Sales"
+                value={formatCurrency(summary?.grossSales)}
                 icon={CashDollarIcon}
-                subValue={`${summary?.data.orderCount || 0} Orders`}
+                subValue={`${summary?.orderCount || 0} Total Orders`}
               />
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 4, lg: 4 }}>
               <KpiCard
                 title="Net Profit"
-                value={formatCurrency(summary?.data.netProfit || 0)}
-                icon={ReceiptIcon}
-                color={(summary?.data?.netProfit ?? 0) >= 0 ? 'success' : 'critical'}
-                subValue={`ROI: ${summary?.data.roi || 0}%`}
+                value={formatCurrency(summary?.netProfit)}
+                icon={MoneyIcon}
+                color={(summary?.netProfit ?? 0) >= 0 ? 'success' : 'critical'}
+                badge={{ 
+                  text: formatPercent(summary?.netMargin), 
+                  tone: (summary?.netMargin ?? 0) >= 15 ? 'success' : 'critical' 
+                }}
+                subValue="After ALL expenses & refunds"
               />
             </Grid.Cell>
             <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 4, lg: 4 }}>
               <KpiCard
-                title="Net Margin"
-                value={`${summary?.data.netMargin || 0}%`}
-                icon={AlertBubbleIcon}
-                subValue="Profit / Revenue"
+                title="Marketing Efficiency"
+                value={`${summary?.poas?.toFixed(2) || '0.00'}x POAS`}
+                icon={ChartVerticalIcon}
+                color="magic"
+                subValue={`ROAS: ${summary?.roas?.toFixed(2) || '0.00'}x`}
+                badge={{ text: 'Profit on Ad Spend', tone: 'info' }}
               />
-            </Grid.Cell>
-
-            <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 4, lg: 4 }}>
-              <KpiCard title="COGS" value={formatCurrency(summary?.data.totalCogs || 0)} icon={CartIcon} />
-            </Grid.Cell>
-            <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 4, lg: 4 }}>
-              <KpiCard title="Gateway Fees" value={formatCurrency(summary?.data.totalFees || 0)} icon={CreditCardIcon} />
-            </Grid.Cell>
-            <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 4, lg: 4 }}>
-              <KpiCard title="Ad Spend" value={formatCurrency(summary?.data.totalAdSpend || 0)} icon={ChartVerticalIcon} />
             </Grid.Cell>
           </Grid>
         </Layout.Section>
 
-        {/* 3. TREND CHART (Apple Quality Visualization) ✅ */}
+        {/* 3. EXPENSE BREAKDOWN (Gider Kırılımları) */}
+        <Layout.Section>
+            <Grid>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 3, lg: 3 }}>
+                    <KpiCard title="Total Discounts" value={formatCurrency(summary?.totalDiscounts)} icon={DiscountIcon} />
+                </Grid.Cell>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 3, lg: 3 }}>
+                    <KpiCard title="COGS (Product Cost)" value={formatCurrency(summary?.totalCogs)} icon={CartIcon} />
+                </Grid.Cell>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 3, lg: 3 }}>
+                    <KpiCard title="Ad Spend" value={formatCurrency(summary?.totalAdSpend)} icon={AlertBubbleIcon} />
+                </Grid.Cell>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 3, lg: 3 }}>
+                    <KpiCard title="Shopify & Gateway Fees" value={formatCurrency(summary?.totalFees)} icon={ReceiptIcon} />
+                </Grid.Cell>
+            </Grid>
+        </Layout.Section>
+
+        {/* 4. WATERFALL CHART (Nereye Gitti Bu Para?) */}
+        {summary?.waterfallSteps && summary.waterfallSteps.length > 0 && (
+          <Layout.Section>
+            <LegacyCard title="Profit Waterfall (Where did the money go?)" sectioned>
+              <div style={{ height: '350px', width: '100%' }}>
+                  <ResponsiveContainer width="99%" height="100%">
+                    <BarChart data={summary.waterfallSteps} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis tickFormatter={(val) => `$${val}`} axisLine={false} tickLine={false} />
+                      <Tooltip content={<WaterfallTooltip />} cursor={{fill: 'transparent'}}/>
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {summary.waterfallSteps.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            // Gelir ve Net kâr yeşil, aradaki giderler kırmızı
+                            fill={entry.type === 'INCOME' || entry.label === 'Net Profit' ? '#00a36d' : '#d82c0d'} 
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+              </div>
+            </LegacyCard>
+          </Layout.Section>
+        )}
+
+        {/* 5. TREND CHART (Zaman İçindeki Değişim) */}
         <Layout.Section>
           <LegacyCard title="Revenue vs. Profit Trend" sectioned>
-            <div style={{ height: '400px', width: '100%' }}>
+            <div style={{ height: '350px', width: '100%' }}>
               {(isTrendsLoading || !storeId) ? (
                 <SkeletonBodyText lines={10} />
               ) : (
                 <ResponsiveContainer width="99%" height="100%">
-                  <ComposedChart data={trends?.data}>
+                  <ComposedChart data={trends}>
                     <defs>
                       <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3083ff" stopOpacity={0.1} />
@@ -189,10 +266,11 @@ export default function StoreAnalytics() {
                     />
                     <Tooltip
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      formatter={(value: any) => formatCurrency(Number(value))}
                     />
                     <Legend verticalAlign="top" height={36} />
                     <Area
-                      name="Revenue"
+                      name="Net Revenue"
                       type="monotone"
                       dataKey="revenue"
                       stroke="#3083ff"
