@@ -48,7 +48,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             icon: ReceiptIcon,
             onClick: () => router.push('/payouts'),
             selected: pathname.startsWith('/payouts'),
-            badge: 'New', // Satıcının dikkatini çekmek için ufak bir rozet
           },
           {
             label: 'Data Management',
